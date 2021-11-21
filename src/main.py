@@ -25,7 +25,7 @@ class Error():
         Return a brief summary of the error in question for logging purposes.
         """
 
-    def full(self) -> str:
+    def full_description(self) -> str:
         """
         Returns a full version version of the error in a "nice" form.
         """
@@ -105,8 +105,8 @@ def test_files(tests: Iterable[Test], logger: Logger) -> bool:
         if len(errors := verifier(file)) > 0:
             success = False
             for error in errors:
-                logger.error(f"Error for {file}: {repr(error)}")
-                print(f"Error for {file}: {str(error)}")
+                logger.error(f"Error for {file}: {error.brief_summary()}")
+                print(f"Error for {file}: {error.full_description()}")
         else:
             logger.info(f"Success for {file}")
             print(f"Success for {file}")
