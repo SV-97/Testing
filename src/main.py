@@ -4,8 +4,7 @@ from typing import (Tuple,
                     Union,
                     TypeVar,
                     Iterable,
-                    List,
-                    Bool)
+                    List)
 from pathlib import Path
 from logging import Logger
 
@@ -95,9 +94,10 @@ A `Test` now is some file (or folder) together with a function telling us how to
 Test = Tuple[Path, FileChecker]
 
 
-def test_files(tests: Iterable[Test], logger: Logger) -> Bool:
+def test_files(tests: Iterable[Test], logger: Logger) -> bool:
     """
     Processes a bunch of tests and logs the results, finally telling us if any errors occured.
+    So a return of `True` means there was some error - and a return of `False` that there were None.
     """
     success = True
     # this loop could be parallelized
