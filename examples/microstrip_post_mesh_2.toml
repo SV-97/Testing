@@ -1,0 +1,38 @@
+source_file = "/home/stefan/Dokumente/FH/Beschäftigung Dr Wimmer/Arbeit/EMF 2021/Präsentation/raw_data/unit_square_results/sequential/unit_square.mesh_level_0.post.msh_2"
+
+[file_comparison.1.parameters]
+# compare coordinates
+comparison_file = "/home/stefan/Dokumente/FH/Beschäftigung Dr Wimmer/Arbeit/EMF 2021/Präsentation/raw_data/unit_square_results/sequential/unit_square.mesh_level_0.post.msh_2"
+# compare two files line by line
+source_preprocessor = "lines"
+# Skip the first two lines
+# Split each line at the whitespaces and take out the second and third blocks - these are our numbers.
+source_preprocessor_params = { in_skip = 2, stop_pred = 'lambda x: re.match("end Coordinates", x)', processing_pipeline = [
+    'lambda x: re.findall(r"\S+", x)[1:]',
+    "lambda x: list(map(float, x))",
+] }
+# we compare both pairs of numbers via their relative error
+verifier = "elementwise"
+verifier_params = { verifiers = [
+    { name = "absolute_error", args = { max_error = 1e-9 } },
+    { name = "absolute_error", args = { max_error = 1e-9 } },
+] }
+# Could also simply write ↓ to choose the same verifier for all positions
+# verifier_params = { verifiers = [
+#     { name = "absolute_error", args = { max_error = 1e-9 } },
+# ] }
+
+[file_comparison.2.parameters]
+# compare elements
+comparison_file = "/home/stefan/Dokumente/FH/Beschäftigung Dr Wimmer/Arbeit/EMF 2021/Präsentation/raw_data/unit_square_results/sequential/unit_square.mesh_level_0.post.msh_0"
+# compare two files line by line
+source_preprocessor = "lines"
+# Skip the first two lines
+# Split each line at the whitespaces and take out the second and third blocks - these are our numbers.
+source_preprocessor_params = { start_pred = 'lambda x: re.match("Elements", x)', stop_pred = 'lambda x: re.match("end elements", x)', processing_pipeline = [
+    'lambda x: re.findall(r"\S+", x)[1:]',
+    "lambda x: list(map(int, x))",
+] }
+# we compare both lists for strict equality
+verifier = "elementwise"
+verifier_params = { verifiers = [{ name = "strict", args = {} }] }

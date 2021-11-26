@@ -1,0 +1,9 @@
+2021-11-26T23:11:49 [INFO    ]: Starting run
+2021-11-26T23:11:49 [INFO    ]: No errors for ../examples/test_example_1.toml
+2021-11-26T23:11:50 [INFO    ]: No errors for ../examples/test_example_2.toml
+2021-11-26T23:11:50 [ERROR   ]: Failed to execute setup for test_example_3.toml: Command 'echo test && exit 1' returned non-zero exit status 1.
+2021-11-26T23:11:51 [INFO    ]: No errors for ../examples/test_example_4.toml
+2021-11-26T23:11:51 [ERROR   ]: File/folder test_example_5.toml does not exist
+2021-11-26T23:11:51 [INFO    ]: No errors for /home/stefan/GitHub/Testing/examples/microstrip_post_mesh_2.toml
+2021-11-26T23:11:51 [INFO    ]: No errors for /home/stefan/GitHub/Testing/examples/microstrip_post_mesh_2.toml
+2021-11-26T23:11:52 [INFO    ]: Finished run
