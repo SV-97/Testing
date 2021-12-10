@@ -61,7 +61,7 @@ def lines_preprocessor(path: Path, *, processing_pipeline: List[str] = [], in_sk
     else:
         start_pred = eval(start_pred, loc)
     if stop_pred == "":
-        def stop_pred(_): return True
+        def stop_pred(_): return False
     else:
         stop_pred = eval(stop_pred, loc)
     for line_number, line in drop(enumerate(open(path, "r")), in_skip):

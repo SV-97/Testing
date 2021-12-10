@@ -11,10 +11,10 @@ from itertools import chain
 @dataclass
 class TestSpec(ABC):
     """A test specification (parsed config file)
-    source_file : the path to the input file/folder
+    source_path : the path to the input file/folder
     setup : a bash command that's executed before running the test (e.g. make)
     """
-    source_file: Optional[Path] = field(init=False, default=None)
+    source_path: Optional[Path] = field(init=False, default=None)
     setup: Optional[str] = field(init=False, default=None)
 
 
@@ -73,7 +73,7 @@ def parse(source: str) -> List[TestSpec]:
                 new_specs = [ErrorSpec(
                     f"Invalid specification: unknown test method `{test_entry}`")]
         for spec in new_specs:
-            spec.source_file = t["source_file"]
+            spec.source_path = t["source_path"]
             spec.setup = t.get("setup", None)
         specs.extend(new_specs)
     return specs

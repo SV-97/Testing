@@ -1,4 +1,4 @@
-source_file = "/home/stefan/Dokumente/FH/Beschäftigung Dr Wimmer/Arbeit/EMF 2021/Präsentation/raw_data/unit_square_results/sequential/unit_square.mesh_level_0.post.msh_2"
+source_path = "/home/stefan/Dokumente/FH/Beschäftigung Dr Wimmer/Arbeit/EMF 2021/Präsentation/raw_data/unit_square_results/sequential/unit_square.mesh_level_0.post.msh_2"
 
 [file_comparison.1.parameters]
 # compare coordinates

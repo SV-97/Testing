@@ -1,0 +1,9 @@
+2021-12-10T15:12:18 [INFO    ]: Starting run
+2021-12-10T15:12:18 [ERROR   ]: File/folder test_example_1.toml does not exist
+2021-12-10T15:12:18 [ERROR   ]: File/folder test_example_2.toml does not exist
+2021-12-10T15:12:18 [ERROR   ]: File/folder test_example_3.toml does not exist
+2021-12-10T15:12:18 [ERROR   ]: File/folder test_example_4.toml does not exist
+2021-12-10T15:12:18 [ERROR   ]: File/folder test_example_5.toml does not exist
+2021-12-10T15:12:18 [INFO    ]: No errors for /home/stefan/GitHub/Testing/examples/microstrip_post_mesh_2.toml
+2021-12-10T15:12:18 [INFO    ]: No errors for /home/stefan/GitHub/Testing/examples/microstrip_post_mesh_2.toml
+2021-12-10T15:12:18 [INFO    ]: Finished run

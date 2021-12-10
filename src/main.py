@@ -8,6 +8,17 @@ import click
 import os
 from time import sleep
 import subprocess
+from collections import Counter
+from enum import Enum, auto
+
+SUCCESS_MARK = "✔"
+FAIL_MARK = "⨯"
+
+
+class TestResult(Enum):
+    SUCCESS = auto()
+    FAILURE = auto()
+    # maybe add possibility to SKIP tests
 
 
 def print_with_terminal_width(text):
@@ -26,7 +37,7 @@ def print_with_terminal_width(text):
 def file_comparison(spec: FileComparison) -> List[Error]:
     errors = []
     for ((source_loc, source_val), (_comp_loc, comp_val)) in zip(
-            spec.source_prepro(spec.source_file),
+            spec.source_prepro(spec.source_path),
             spec.comp_prepro(spec.comparison_file)):
         new_errors = spec.verifier(source_val, comp_val)
         for error in new_errors:
@@ -58,6 +69,91 @@ def folder_comparison(folder: Path, file_comparisons: List[FileChecker]):
 #             print(f"Success for {file}")
 #     return success
 
+def try_run_setup(file, spec, logger, verbosity):
+    try:
+        subprocess.run(spec.setup,
+                       shell=True,
+                       check=True,
+                       capture_output=True,
+                       text=True)
+    except subprocess.CalledProcessError as e:
+        message = f"Failed to execute setup for {file.name}: {e}"
+        puts(colored.red(f"{FAIL_MARK} {message}"))
+        if verbosity == "2":
+            with indent(4, "|"):
+                puts(colored.red(f"Captured stdout:"))
+                with indent(2):
+                    puts(e.stdout)
+                puts(colored.red(f"Captured stderr:"))
+                with indent(2):
+                    puts(e.stderr)
+        logger.error(message)
+        raise e
+
+
+def process_spec(file, spec, logger, verbosity) -> TestResult:
+    # start by running the file's setup command
+    if spec.setup is not None:
+        try:
+            try_run_setup(file, spec, logger, verbosity)
+        except subprocess.CalledProcessError:
+            return TestResult.FAILURE
+
+    # and proceed by actually executing the specified test
+    if type(spec) == FileComparison:  # add more comparison types here
+        errors = file_comparison(spec)
+    elif type(spec) == ErrorSpec:
+        errors = [Error(f"Erronous specification: {spec.message}")]
+    else:
+        raise NotImplementedError(
+            f"Spec not implemented: {type(spec)}")
+    if len(errors) == 0:
+        # may want to make the specification checkers (e.g. `file_comparison`) return
+        # a `Status` rather than an `Error` to improve diagnostics for multi test files.
+        # This would allow us to get more granual output to show where exactly we
+        # succeeded.
+        puts(colored.green(
+            f"{SUCCESS_MARK} No errors for {file.name}"))
+        logger.info(f"No errors for {file}")
+        return TestResult.SUCCESS
+    else:
+        puts(colored.red(
+            f"{FAIL_MARK} Encountered errors for {file.name}"))
+        logger.error(f"Encountered errors for {file.name}")
+        if verbosity != "0":
+            errors_to_print = errors if verbosity == "2" else errors[:5]
+            with indent(4, "|"):
+                for error in errors_to_print:  # only print some errors
+                    print_with_terminal_width(error.full_description())
+                for error in errors:  # but log all of them
+                    logger.debug(
+                        f"Error for {file.name}: {error.brief_summary()}")
+                if errors_to_print != errors:
+                    print_with_terminal_width(
+                        f"... and {len(errors) - len(errors_to_print)} further errors")
+        return TestResult.FAILURE
+
+
+def process_file(file, logger, verbosity) -> List[TestResult]:
+    if not file.exists():
+        puts(colored.red(
+            f"{FAIL_MARK} File/folder {file.name} does not exist"))
+        logger.error(f"File/folder {file.name} does not exist")
+        return [TestResult.FAILURE]
+
+    with file.open() as f:
+        specs = parse(f.read())
+
+    return [process_spec(file, spec, logger, verbosity) for spec in specs]
+
+
+LOG_LEVELS = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
+}
+
 
 @click.command()
 @click.option("--verbose", "-v",
@@ -69,99 +165,47 @@ def folder_comparison(folder: Path, file_comparisons: List[FileChecker]):
 @click.option("--files", "-f",
               multiple=True, type=Path,
               default=[
-                  "../examples/test_example_1.toml",
-                  "../examples/test_example_2.toml",
-                  "../examples/test_example_3.toml",
-                  "../examples/test_example_4.toml",
-                  "../examples/test_example_5.toml",
-                  "/home/stefan/GitHub/Testing/examples/microstrip_post_mesh_2.toml"],
+                  "../examples/test_successful_file_comparison_relative.toml",
+                  "../examples/test_successful_file_comparison_absolute.toml",
+                  "../examples/test_failing_setup.toml",
+                  "../examples/test_failing_relative.toml",
+                  "../examples/test_nonexistant_file.toml",
+                  "/home/stefan/GitHub/Testing/examples/test_microstrip_post_mesh_2.toml"],
               help="Test specification files to run. You may specify multiple files this way, e.g. `-f path1 -f path2 ...`.")
 @click.option("--log-file", "-lf", type=Path,
               default="./log.txt", help="Where to save the logfile.")
 @click.option("--log-level", "-ll",
-              type=click.Choice(list(map(str,
-                                         [logging.DEBUG, logging.INFO,
-                                          logging.ERROR, logging.CRITICAL]))),
-              default=str(logging.INFO), help="What to log.")
+              type=click.Choice(LOG_LEVELS.keys()),
+              default="INFO", help=f"What to log.")
 def main(files, verbose, log_file, log_level):
     # set up the logger
     handler = logging.FileHandler(filename=log_file, mode="w")
     formatter = logging.Formatter(
-        #fmt='{asctime} [{levelname:8}] from {module:>20}.{funcName:30} "{message}"',
+        # fmt='{asctime} [{levelname:8}] from {module:>20}.{funcName:30} "{message}"',
         fmt='{asctime} [{levelname:8}]: {message}',
         style="{",
         datefmt="%Y-%m-%dT%H:%m:%S")
     handler.setFormatter(formatter)
     logger = logging.getLogger()
     logger.addHandler(handler)
-    logger.setLevel(int(log_level))
+    logger.setLevel(int(LOG_LEVELS[log_level]))
 
     logger.info("Starting run")
 
+    # process all the files: read them in and run the tests inside
+    result_counter = Counter()
     for file in files:
-        if not file.exists():
-            puts(colored.red(f"File/folder {file.name} does not exist"))
-            logger.error(f"File/folder {file.name} does not exist")
-            continue
+        result_counter.update(process_file(file, logger, verbose))
 
-        with file.open() as f:
-            specs = parse(f.read())
+    # show the user a summary of all the tests - how many failed, succeeded etc.
+    success = result_counter[TestResult.FAILURE] == 0
+    summary = f"Results: {'ok' if success else 'failed'}. " \
+        f"{result_counter.get(TestResult.SUCCESS, 0)} passed; {result_counter.get(TestResult.FAILURE, 0)} failed"
 
-        for spec in specs:
-            # start by running the file's setup command
-            if spec.setup is not None:
-                try:
-                    subprocess.run(spec.setup,
-                                   shell=True,
-                                   check=True,
-                                   capture_output=True,
-                                   text=True)
-                except subprocess.CalledProcessError as e:
-                    message = f"Failed to execute setup for {file.name}: {e}"
-                    puts(colored.red(message))
-                    if verbose == "2":
-                        with indent(4, "|"):
-                            puts(colored.red(f"Captured stdout:"))
-                            with indent(2):
-                                puts(e.stdout)
-                            puts(colored.red(f"Captured stderr:"))
-                            with indent(2):
-                                puts(e.stderr)
-                    logger.error(message)
-                    continue
-            # and proceed by actually executing the specified test
-            if type(spec) == FileComparison:  # add more comparison types here
-                errors = file_comparison(spec)
-            elif type(spec) == ErrorSpec:
-                errors = [Error(f"Erronous specification: {spec.message}")]
-            else:
-                raise NotImplementedError(
-                    f"Spec not implemented: {type(spec)}")
-            if len(errors) == 0:
-                # may want to make the specification checkers (e.g. `file_comparison`) return
-                # a `Status` rather than an `Error` to improve diagnostics for multi test files.
-                # This would allow us to get more granual output to show where exactly we
-                # succeeded.
-                puts(colored.green(f"No errors for {file.name}"))
-                logger.info(f"No errors for {file}")
-            else:
-                puts(colored.red(f"Encountered errors for {file.name}"))
-                logger.error(f"Encountered errors for {file.name}")
-                if verbose != "0":
-                    errors_to_print = errors if verbose == "2" else errors[:5]
-                    with indent(4, "|"):
-                        for error in errors_to_print:  # only print some errors
-                            print_with_terminal_width(error.full_description())
-                        for error in errors:  # but log all of them
-                            logger.debug(
-                                f"Error for {file.name}: {error.brief_summary()}")
-                        if errors_to_print != errors:
-                            print_with_terminal_width(
-                                f"... and {len(errors) - len(errors_to_print)} further errors")
-        sleep(0.5)
-    # print([e.message for e in errors])
-    logger.info("Finished run")
+    puts()
+    puts((colored.green if success else colored.red)(summary, bold=True))
+    logger.info(summary)
 
 
 if __name__ == "__main__":
-    main()  # [Path("../examples/test_example.toml")]
+    main()
