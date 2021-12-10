@@ -103,7 +103,7 @@ The `elementwise` verifier will take corresponding pairs of tokens from the sour
 
  | Parameter    |  Type  | Description|
  |---|---|---|
- |`verifiers`| `List[dict]` | List of dictionaries where each entry specifies another `verifier` via its `name` and `args`. |
+ |`verifiers`| `List[dict]` | List of dictionaries where each entry specifies another `verifier` via its `name` and `args`. These verifiers are used to verify each element passed to the original verifier (So the original one may receive a list of values and compare those with the list of verifiers as specified here.) Note that this list is cycled, so to compare a list of values all in the same way it's enough to specify **one** verifier in this list. |
 
 ##### `absolute_error`
 
